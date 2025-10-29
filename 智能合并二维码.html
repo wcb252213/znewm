@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能二维码合并工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 500px 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        .left-panel {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            padding-right: 20px;
+        }
+
+        .right-panel {
+            position: sticky;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+            font-size: 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .description {
+            background: linear-gradient(135deg, #e8f4ff 0%, #f3e7ff 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            border-left: 4px solid #667eea;
+        }
+
+        .description h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .upload-section {
+            margin-bottom: 20px;
+        }
+
+        .upload-section h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .upload-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 0;
+        }
+
+        .upload-box {
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 20px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .upload-box:hover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+
+        .upload-box.active {
+            border-color: #667eea;
+            background-color: #e8f4ff;
+        }
+
+        .upload-box input[type="file"] {
+            display: none;
+        }
+
+        .upload-box img {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px auto;
+            display: block;
+        }
+
+        .control-section {
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .control-group label {
+            min-width: 120px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .control-group input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .control-group span {
+            min-width: 60px;
+            text-align: right;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-area {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-area h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        #canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 80vh;
+            width: auto;
+            height: auto;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+            border-left: 4px solid #28a745;
+        }
+
+        input[type="radio"]:checked + span {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        input[type="radio"]:checked {
+            accent-color: #667eea;
+        }
+
+        label:has(input[type="radio"]:checked) {
+            border-color: #667eea !important;
+            background-color: #e8f4ff !important;
+        }
+
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .left-panel {
+                max-height: none;
+            }
+
+            .right-panel {
+                position: relative;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .upload-area {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 智能二维码合并工具</h1>
+        <p class="subtitle">自动识别并重新生成,完美合并微信和支付宝收款码</p>
+
+        <div class="success-message" id="successMessage"></div>
+
+        <div class="main-layout">
+            <!-- 左侧面板 -->
+            <div class="left-panel">
+
+                <div class="upload-section">
+            <h3>📤 上传二维码</h3>
+            <div class="upload-area">
+                <div class="upload-box" onclick="document.getElementById('wechatFile').click()">
+                    <input type="file" id="wechatFile" accept="image/*">
+                    <div>💚 上传微信收款码</div>
+                    <div id="wechatStatus" style="color: #666; font-size: 14px; margin-top: 10px;">点击上传</div>
+                </div>
+                <div class="upload-box" onclick="document.getElementById('alipayFile').click()">
+                    <input type="file" id="alipayFile" accept="image/*">
+                    <div>💙 上传支付宝收款码</div>
+                    <div id="alipayStatus" style="color: #666; font-size: 14px; margin-top: 10px;">点击上传</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3>⚙️ 参数调整</h3>
+            <div class="control-group">
+                <label>整体大小:</label>
+                <input type="range" id="overallSize" min="400" max="1200" value="600" oninput="updateValues()">
+                <span id="overallSizeValue">600</span>px
+            </div>
+            <div class="control-group">
+                <label>支付宝比例:</label>
+                <input type="range" id="alipayRatio" min="20" max="50" value="35" oninput="updateValues()">
+                <span id="alipayRatioValue">35</span>%
+            </div>
+            <div class="control-group">
+                <label>右/下边距:</label>
+                <input type="range" id="marginRight" min="0" max="50" value="5" oninput="updateValues()" style="width: 45%; display: inline-block;">
+                <span id="marginRightValue">5</span>
+                <input type="range" id="marginBottom" min="0" max="50" value="5" oninput="updateValues()" style="width: 45%; display: inline-block; margin-left: 10px;">
+                <span id="marginBottomValue">5</span>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3>🎨 边框和文字(可选)</h3>
+
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">📷 上传边框(可选):</label>
+                <div class="upload-box" onclick="document.getElementById('frameFile').click()" style="max-width: 100%;">
+                    <input type="file" id="frameFile" accept="image/*" style="display: none;">
+                    <div>🖼️ 点击上传边框</div>
+                    <div id="frameStatus" style="color: #666; font-size: 12px; margin-top: 8px;">未上传</div>
+                </div>
+                <small style="color: #999; display: block; margin-top: 5px; font-size: 12px;">PNG格式,透明中心区域</small>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">📝 文字内容:</label>
+                <input type="text" id="bottomText" placeholder="例如: 支持微信/支付宝扫码支付" oninput="updateValues()" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+            </div>
+
+            <div class="control-group">
+                <label>文字大小:</label>
+                <input type="range" id="fontSize" min="20" max="80" value="60" oninput="updateValues()">
+                <span id="fontSizeValue">60</span>px
+            </div>
+
+            <div class="control-group">
+                <label>文字颜色:</label>
+                <input type="color" id="textColor" value="#000000" onchange="updateValues()" style="width: 60px; height: 40px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
+            </div>
+
+            <div class="control-group">
+                <label>文字粗细:</label>
+                <select id="fontWeight" onchange="updateValues()" style="padding: 8px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+                    <option value="normal">普通</option>
+                    <option value="bold" selected>加粗</option>
+                </select>
+            </div>
+
+            <h4 style="margin-top: 15px; margin-bottom: 10px; color: #667eea; font-size: 14px;">📍 位置调整</h4>
+
+            <div class="control-group">
+                <label>二维码X坐标:</label>
+                <input type="range" id="qrPosX" min="-500" max="500" value="0" oninput="updateValues()">
+                <span id="qrPosXValue">0</span>px
+            </div>
+
+            <div class="control-group">
+                <label>二维码Y坐标:</label>
+                <input type="range" id="qrPosY" min="-500" max="500" value="-90" oninput="updateValues()">
+                <span id="qrPosYValue">-90</span>px
+            </div>
+
+            <div class="control-group">
+                <label>文字Y坐标:</label>
+                <input type="range" id="bottomTextPosY" min="-800" max="500" value="-500" oninput="updateValues()">
+                <span id="bottomTextPosYValue">-500</span>px
+            </div>
+        </div>
+
+        <button onclick="mergeQRCodes()" id="mergeBtn" disabled style="width: 100%; margin-top: 15px;">🎨 开始合并二维码</button>
+            </div>
+
+            <!-- 右侧面板 -->
+            <div class="right-panel">
+                <div id="resultArea" class="result-area" style="display: block;">
+                    <h3>预览区域</h3>
+                    <p style="color: #999; margin-top: 10px;">合并后的二维码将显示在这里</p>
+                    <canvas id="canvas" style="display: none;"></canvas>
+                    <div style="margin-top: 20px; display: none;" id="downloadBtn">
+                        <button onclick="downloadImage()">📥 下载合并后的二维码</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 jsQR 库用于识别二维码 -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- 引入 qrcode-generator 库用于生成二维码 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
+    <script>
+        let wechatImage = null;
+        let alipayImage = null;
+        let wechatData = null;
+        let alipayData = null;
+        let frameImage = null;
+
+        // 页面加载时自动加载默认边框
+        window.addEventListener('load', function() {
+            loadDefaultFrame();
+        });
+
+        function loadDefaultFrame() {
+            const img = new Image();
+            img.onload = function() {
+                console.log('默认边框加载成功: 模版1.png', img.width, 'x', img.height);
+                frameImage = img;
+                document.getElementById('frameStatus').textContent = '✅ 模版1.png';
+            };
+            img.onerror = function() {
+                console.log('默认边框不存在或加载失败: 模版1.png');
+                document.getElementById('frameStatus').textContent = '未上传';
+            };
+            img.src = '模版1.png';
+        }
+
+        function showMessage(message) {
+            const msg = document.getElementById('successMessage');
+            msg.textContent = message;
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 3000);
+        }
+
+        function updateValues() {
+            document.getElementById('overallSizeValue').textContent = document.getElementById('overallSize').value;
+            document.getElementById('alipayRatioValue').textContent = document.getElementById('alipayRatio').value;
+            document.getElementById('marginRightValue').textContent = document.getElementById('marginRight').value;
+            document.getElementById('marginBottomValue').textContent = document.getElementById('marginBottom').value;
+            document.getElementById('fontSizeValue').textContent = document.getElementById('fontSize').value;
+            document.getElementById('qrPosXValue').textContent = document.getElementById('qrPosX').value;
+            document.getElementById('qrPosYValue').textContent = document.getElementById('qrPosY').value;
+            document.getElementById('bottomTextPosYValue').textContent = document.getElementById('bottomTextPosY').value;
+
+            // 如果已经生成过,实时更新(但不触发滚动)
+            if (wechatData && alipayData) {
+                mergeQRCodes(true);  // 传递参数表示是实时更新
+            }
+        }
+
+        // 处理边框图片上传
+        document.getElementById('frameFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                console.log('边框: 未选择文件');
+                return;
+            }
+
+            console.log('边框: 文件已选择', file.name, file.type, file.size, 'bytes');
+            document.getElementById('frameStatus').textContent = '正在加载...';
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                console.log('边框: 文件读取完成');
+                const img = new Image();
+                img.onload = function() {
+                    console.log('边框: 图片加载完成', img.width, 'x', img.height);
+                    frameImage = img;
+                    document.getElementById('frameStatus').textContent = '✅ 已上传';
+
+                    // 如果已经生成过二维码,实时更新
+                    if (wechatData && alipayData) {
+                        mergeQRCodes();
+                    }
+                };
+                img.onerror = function() {
+                    console.error('边框: 图片加载失败');
+                    document.getElementById('frameStatus').textContent = '❌ 图片加载失败';
+                };
+                img.src = event.target.result;
+            };
+            reader.onerror = function() {
+                console.error('边框: 文件读取失败');
+                document.getElementById('frameStatus').textContent = '❌ 文件读取失败';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 处理微信二维码上传
+        document.getElementById('wechatFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                console.log('微信: 未选择文件');
+                return;
+            }
+
+            console.log('微信: 文件已选择', file.name, file.type, file.size, 'bytes');
+            document.getElementById('wechatStatus').textContent = '正在识别...';
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                console.log('微信: 文件读取完成');
+                const img = new Image();
+                img.onload = function() {
+                    console.log('微信: 图片加载完成', img.width, 'x', img.height);
+                    wechatImage = img;
+
+                    // 识别二维码
+                    decodeQRCode(img, 'wechat');
+                };
+                img.onerror = function() {
+                    console.error('微信: 图片加载失败');
+                    document.getElementById('wechatStatus').textContent = '❌ 图片加载失败';
+                };
+                img.src = event.target.result;
+            };
+            reader.onerror = function() {
+                console.error('微信: 文件读取失败');
+                document.getElementById('wechatStatus').textContent = '❌ 文件读取失败';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 处理支付宝二维码上传
+        document.getElementById('alipayFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                console.log('支付宝: 未选择文件');
+                return;
+            }
+
+            console.log('支付宝: 文件已选择', file.name, file.type, file.size, 'bytes');
+            document.getElementById('alipayStatus').textContent = '正在识别...';
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                console.log('支付宝: 文件读取完成');
+                const img = new Image();
+                img.onload = function() {
+                    console.log('支付宝: 图片加载完成', img.width, 'x', img.height);
+                    alipayImage = img;
+
+                    // 识别二维码
+                    decodeQRCode(img, 'alipay');
+                };
+                img.onerror = function() {
+                    console.error('支付宝: 图片加载失败');
+                    document.getElementById('alipayStatus').textContent = '❌ 图片加载失败';
+                };
+                img.src = event.target.result;
+            };
+            reader.onerror = function() {
+                console.error('支付宝: 文件读取失败');
+                document.getElementById('alipayStatus').textContent = '❌ 文件读取失败';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        async function decodeQRCodeWithAPI(canvas, type) {
+            console.log(`${type}: jsQR失败,尝试使用在线API识别`);
+
+            try {
+                // 转换为Blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+                // 使用FormData上传
+                const formData = new FormData();
+                formData.append('file', blob, 'qrcode.png');
+
+                console.log(`${type}: 调用api.qrserver.com API`);
+                const response = await fetch('https://api.qrserver.com/v1/read-qr-code/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log(`${type}: API返回:`, result);
+
+                if (result && result[0] && result[0].symbol && result[0].symbol[0] && result[0].symbol[0].data) {
+                    const qrData = result[0].symbol[0].data;
+                    console.log(`${type}: ✅ API识别成功!`);
+                    console.log(`${type}: 二维码内容:`, qrData);
+                    return qrData;
+                }
+
+                console.log(`${type}: API也无法识别`);
+                return null;
+            } catch (error) {
+                console.error(`${type}: API识别出错:`, error);
+                return null;
+            }
+        }
+
+        async function decodeQRCode(image, type) {
+            console.log(`${type}: 开始识别二维码`);
+            console.log(`${type}: 图片尺寸`, image.width, 'x', image.height);
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            console.log(`${type}: 绘制图片到Canvas`);
+            ctx.drawImage(image, 0, 0);
+
+            console.log(`${type}: 获取图片数据`);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            console.log(`${type}: 图片数据大小`, imageData.data.length, 'bytes');
+
+            console.log(`${type}: 调用jsQR识别`);
+            let code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            console.log(`${type}: jsQR返回结果:`, code);
+
+            let qrData = null;
+
+            if (code) {
+                console.log(`${type}: ✅ jsQR识别成功!`);
+                console.log(`${type}: 二维码内容:`, code.data);
+                console.log(`${type}: 二维码位置:`, code.location);
+                qrData = code.data;
+            } else {
+                console.warn(`${type}: ❌ jsQR识别失败`);
+                console.log(`${type}: 尝试使用备用识别方案...`);
+
+                // 更新状态
+                if (type === 'wechat') {
+                    document.getElementById('wechatStatus').textContent = '尝试备用识别...';
+                } else {
+                    document.getElementById('alipayStatus').textContent = '尝试备用识别...';
+                }
+
+                // 尝试API识别
+                qrData = await decodeQRCodeWithAPI(canvas, type);
+            }
+
+            if (qrData) {
+                if (type === 'wechat') {
+                    wechatData = qrData;
+                    document.getElementById('wechatStatus').textContent = '✅ 识别成功';
+                    document.querySelector('#wechatFile').parentElement.classList.add('active');
+                } else {
+                    alipayData = qrData;
+                    document.getElementById('alipayStatus').textContent = '✅ 识别成功';
+                    document.querySelector('#alipayFile').parentElement.classList.add('active');
+                }
+
+                // 检查是否都上传完成
+                if (wechatData && alipayData) {
+                    console.log('✅ 两个二维码都已识别');
+                    document.getElementById('mergeBtn').disabled = false;
+                    showMessage('✅ 二维码识别成功,可以开始合并了!');
+                }
+            } else {
+                console.warn(`${type}: ❌ 所有识别方法都失败了`);
+
+                if (type === 'wechat') {
+                    document.getElementById('wechatStatus').textContent = '❌ 识别失败,请重新上传';
+                    wechatData = null;
+                } else {
+                    document.getElementById('alipayStatus').textContent = '❌ 识别失败,请重新上传';
+                    alipayData = null;
+                }
+                showMessage('❌ 二维码识别失败,请确保图片清晰完整');
+            }
+        }
+
+        function generateQRCodeImage(text, size) {
+            const qr = qrcode(0, 'H');
+            qr.addData(text);
+            qr.make();
+
+            const cellSize = Math.floor(size / qr.getModuleCount());
+            const actualSize = cellSize * qr.getModuleCount();
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = actualSize;
+            tempCanvas.height = actualSize;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // 白色背景
+            tempCtx.fillStyle = 'white';
+            tempCtx.fillRect(0, 0, actualSize, actualSize);
+
+            // 绘制二维码
+            for (let row = 0; row < qr.getModuleCount(); row++) {
+                for (let col = 0; col < qr.getModuleCount(); col++) {
+                    if (qr.isDark(row, col)) {
+                        tempCtx.fillStyle = 'black';
+                        tempCtx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+
+            return tempCanvas;
+        }
+
+        function mergeQRCodes(isLiveUpdate = false) {
+            if (!wechatData || !alipayData) {
+                showMessage('❌ 请先上传并识别两个二维码');
+                return;
+            }
+
+            // 保存当前滚动位置
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // 获取文字设置
+            const bottomText = document.getElementById('bottomText').value;
+            const fontSize = parseInt(document.getElementById('fontSize').value);
+            const textColor = document.getElementById('textColor').value;
+            const fontWeight = document.getElementById('fontWeight').value;
+
+            // 获取位置调整
+            const qrPosX = parseInt(document.getElementById('qrPosX').value);
+            const qrPosY = parseInt(document.getElementById('qrPosY').value);
+            const bottomTextPosY = parseInt(document.getElementById('bottomTextPosY').value);
+
+            // 计算画布尺寸
+            const overallSize = parseInt(document.getElementById('overallSize').value);
+            const topPadding = 20;
+            const bottomPadding = bottomText ? fontSize + 40 : 20;
+
+            let canvasWidth, canvasHeight, qrSize;
+
+            // 整体大小控制的是二维码的大小，边框保持原始尺寸
+            qrSize = overallSize;
+
+            if (frameImage) {
+                // 有边框时,画布使用边框的原始尺寸
+                canvasWidth = frameImage.width;
+                canvasHeight = frameImage.height;
+            } else {
+                // 没有边框时,画布根据二维码大小计算
+                canvasWidth = qrSize;
+                canvasHeight = qrSize + topPadding + bottomPadding;
+            }
+
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+
+            // 清空画布
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            try {
+                let qrStartY = topPadding;
+
+                // 如果有边框图片,先绘制边框（原始尺寸）
+                if (frameImage) {
+                    ctx.drawImage(frameImage, 0, 0, frameImage.width, frameImage.height);
+                    // 如果有边框,二维码应该绘制在中心
+                    qrStartY = (canvasHeight - qrSize) / 2;
+                }
+
+                // 生成微信二维码(大)
+                const wechatQRCanvas = generateQRCodeImage(wechatData, qrSize);
+
+                // 生成支付宝二维码(小) - 根据比例计算
+                const alipayRatio = parseInt(document.getElementById('alipayRatio').value) / 100;
+                const alipaySize = qrSize * alipayRatio;
+                const alipayQRCanvas = generateQRCodeImage(alipayData, alipaySize);
+
+                // 计算二维码的X坐标(居中) + 用户调整
+                const qrStartX = (canvasWidth - qrSize) / 2 + qrPosX;
+                const adjustedQrStartY = qrStartY + qrPosY;
+
+                // 绘制微信二维码
+                ctx.drawImage(wechatQRCanvas, qrStartX, adjustedQrStartY, qrSize, qrSize);
+
+                // 绘制支付宝二维码到右下角
+                const marginRight = parseInt(document.getElementById('marginRight').value);
+                const marginBottom = parseInt(document.getElementById('marginBottom').value);
+
+                const x = qrStartX + qrSize - alipayQRCanvas.width - marginRight;
+                const y = adjustedQrStartY + qrSize - alipayQRCanvas.height - marginBottom;
+
+                // 先画白色背景
+                ctx.fillStyle = 'white';
+                ctx.fillRect(x - 5, y - 5, alipayQRCanvas.width + 10, alipayQRCanvas.height + 10);
+
+                // 再画支付宝二维码
+                ctx.drawImage(alipayQRCanvas, x, y);
+
+                // 绘制文字
+                if (bottomText) {
+                    ctx.font = `${fontWeight} ${fontSize}px "PingFang SC", "Microsoft YaHei", sans-serif`;
+                    ctx.fillStyle = textColor;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    // 绘制底部文字 (应用位置调整)
+                    const bottomTextY = canvasHeight - bottomPadding / 2 + bottomTextPosY;
+                    ctx.fillText(bottomText, canvasWidth / 2, bottomTextY);
+                }
+
+                // 显示结果(只在首次生成时修改DOM,避免滚动跳动)
+                if (!isLiveUpdate) {
+                    document.getElementById('canvas').style.display = 'block';
+                    document.getElementById('downloadBtn').style.display = 'block';
+                    document.querySelector('#resultArea h3').textContent = '✅ 合并成功!';
+                    document.querySelector('#resultArea p').style.display = 'none';
+                    showMessage('✅ 二维码合并成功!');
+                }
+
+                // 恢复滚动位置(防止实时更新时跳动)
+                if (isLiveUpdate) {
+                    requestAnimationFrame(() => {
+                        window.scrollTo(0, scrollTop);
+                    });
+                }
+
+            } catch (error) {
+                showMessage('❌ 生成二维码失败: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function downloadImage() {
+            const canvas = document.getElementById('canvas');
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const timestamp = new Date().getTime();
+                a.download = `merged_qrcode_${timestamp}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showMessage('✅ 图片已下载!');
+            }, 'image/png');
+        }
+    </script>
+</body>
+</html>
